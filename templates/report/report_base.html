@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório — {{ account.client_name }}</title>
+  <link rel="stylesheet" href="{{ css_path }}">
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <div class="report-header">
+    <div class="header-brand">
+      <div class="brand-title">Relatório de Performance • Meta Ads</div>
+      <div class="client-name">{{ account.client_name }}</div>
+      {% if account.objective %}
+      <div class="objective">Objetivo: {{ account.objective }}</div>
+      {% endif %}
+    </div>
+    <div class="header-meta">
+      <div class="period-label">Período analisado</div>
+      <div class="period-value">{{ period_start }} — {{ period_end }}</div>
+      <div class="generated-at">Gerado em {{ generated_at }}</div>
+    </div>
+  </div>
+
+  <!-- ===== KPI SUMMARY CARDS ===== -->
+  <div class="section-title">Resumo do Período</div>
+  <div class="kpi-grid">
+    {% for card in kpi_cards %}
+    <div class="kpi-card">
+      <div class="kpi-label">{{ card.label }}</div>
+      <div class="kpi-value">{{ card.value }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ===== DAILY SPEND CHART ===== -->
+  {% if chart_spend %}
+  <div class="chart-section">
+    <div class="section-title">Investimento Diário</div>
+    <img class="chart-img" src="{{ chart_spend }}" alt="Gráfico de investimento diário">
+  </div>
+  {% endif %}
+
+  <!-- ===== PAGE 2 ===== -->
+  <div class="page-break"></div>
+
+  <!-- ===== CAMPAIGN PERFORMANCE CHART ===== -->
+  {% if chart_campaigns %}
+  <div class="chart-section">
+    <div class="section-title">Performance por Campanha</div>
+    <img class="chart-img" src="{{ chart_campaigns }}" alt="Gráfico de performance por campanha">
+  </div>
+  {% endif %}
+
+  <!-- ===== CAMPAIGNS SECTION ===== -->
+  <div class="section-title">Detalhamento de Campanhas</div>
+
+  {% if spend_breakdown %}
+  <table class="spend-summary">
+    <tbody>
+      {% for item in spend_breakdown %}
+      <tr>
+        <td class="spend-type">{{ item.label }}</td>
+        <td class="spend-value">{{ item.spend | format_metric("spend") }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="spend-total">
+        <td><strong>Total Investido</strong></td>
+        <td class="spend-value"><strong>{{ total_spend | format_metric("spend") }}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% for group in grouped_campaigns %}
+  <div class="campaign-type-section">
+    <div class="campaign-type-header">
+      <span>{{ group.type_label }}</span>
+      <span class="type-spend">{{ group.spend | format_metric("spend") }}</span>
+    </div>
+    <table class="campaigns-table">
+      <thead>
+        <tr>
+          <th class="col-campaign">Campanha</th>
+          {% for col in group.columns %}
+          <th class="col-metric">{{ col.label }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in group.rows %}
+        <tr>
+          <td class="campaign-name">{{ row.campaign_name }}</td>
+          {% for col in group.columns %}
+          <td class="numeric">{{ row[col.key] | format_metric(col.key) }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td><strong>Total</strong></td>
+          {% for col in group.columns %}
+          <td class="numeric"><strong>{{ group.totals[col.key] | format_metric(col.key) }}</strong></td>
+          {% endfor %}
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <p style="color:#65676B; font-size:9pt;">Nenhuma campanha encontrada para o período.</p>
+  {% endfor %}
+
+  <div class="report-footer-note">
+    Conta: {{ account.account_id }} &nbsp;•&nbsp;
+    Dados extraídos da Meta Ads API &nbsp;•&nbsp;
+    Período: {{ period_start }} a {{ period_end }}
+  </div>
+
+</body>
+</html>

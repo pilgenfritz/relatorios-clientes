@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatórios Meta Ads</title>
+  <style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #F0F2F5;
+  color: #1C1E21;
+  min-height: 100vh;
+}
+.navbar {
+  background: #1877F2;
+  color: #fff;
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+.navbar .brand {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.container {
+  max-width: 1100px;
+  margin: 32px auto;
+  padding: 0 20px;
+}
+.alert {
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.alert-error { background: #FFF0F0; border: 1px solid #FFCDD2; color: #B71C1C; }
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.1);
+  overflow: hidden;
+}
+.card-header {
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #E4E6EB;
+}
+.card-header h2 { font-size: 17px; font-weight: 700; }
+.card-header .subtitle { font-size: 13px; color: #65676B; margin-top: 2px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all .15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: #1877F2; color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #166FE5; }
+.btn-success { background: #42B72A; color: #fff; }
+.btn-success:hover:not(:disabled) { background: #36A420; }
+.btn-outline { background: transparent; color: #1877F2; border: 1.5px solid #1877F2; }
+.btn-outline:hover:not(:disabled) { background: #E7F0FD; }
+.btn-sm { padding: 5px 11px; font-size: 13px; }
+.table-wrapper { overflow-x: auto; }
+table.accounts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.accounts-table thead th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #65676B;
+  background: #F7F8FA;
+  border-bottom: 1px solid #E4E6EB;
+  white-space: nowrap;
+}
+.accounts-table tbody tr { border-bottom: 1px solid #F0F2F5; transition: background .1s; }
+.accounts-table tbody tr:hover { background: #F7F8FA; }
+.accounts-table tbody td { padding: 14px 16px; vertical-align: middle; }
+.account-name { font-weight: 600; }
+.account-id { font-size: 12px; color: #65676B; margin-top: 2px; font-family: monospace; }
+.metrics-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #E7F0FD;
+  color: #1877F2;
+}
+.phone { font-size: 13px; color: #444; }
+.progress-cell { min-width: 220px; }
+.progress-bar-wrap {
+  background: #E4E6EB;
+  border-radius: 20px;
+  height: 6px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 20px;
+  background: #1877F2;
+  transition: width .4s ease;
+}
+.progress-bar-fill.done  { background: #42B72A; }
+.progress-bar-fill.error { background: #FA3E3E; }
+.progress-label {
+  font-size: 12px;
+  color: #65676B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.progress-label.done  { color: #2E7D32; font-weight: 600; }
+.progress-label.error { color: #C62828; font-weight: 600; }
+.action-cell { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #65676B;
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 15px; }
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  background: #1C1E21;
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  animation: slide-in .2s ease;
+  max-width: 320px;
+}
+.toast.success { background: #2E7D32; }
+.toast.error   { background: #C62828; }
+@keyframes slide-in {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="brand">Relatórios Meta Ads</div>
+    <button class="btn btn-success" id="btn-run-all" onclick="runAll()" {% if not accounts %}disabled{% endif %}>
+      Gerar Todos
+    </button>
+  </nav>
+
+  <div class="container">
+
+    {% if error %}
+    <div class="alert alert-error">
+      <strong>Erro ao carregar planilha:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2>Contas de Anúncios</h2>
+          <div class="subtitle">
+            {% if accounts %}
+              {{ accounts|length }} conta{{ 's' if accounts|length != 1 else '' }} carregada{{ 's' if accounts|length != 1 else '' }} da planilha
+            {% else %}
+              Nenhuma conta encontrada
+            {% endif %}
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="location.reload()">Atualizar</button>
+      </div>
+
+      {% if accounts %}
+      <div class="table-wrapper">
+        <table class="accounts-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>WhatsApp</th>
+              <th>Progresso</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for account in accounts %}
+            <tr data-account-id="{{ account.account_id }}">
+              <td>
+                <div class="account-name">{{ account.client_name }}</div>
+                <div class="account-id">{{ account.account_id }}</div>
+              </td>
+              <td>
+                <div class="phone">{{ account.whatsapp }}</div>
+              </td>
+              <td class="progress-cell">
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar-fill" style="width:0%"></div>
+                </div>
+                <div class="progress-label">Aguardando...</div>
+              </td>
+              <td>
+                <div class="action-cell">
+                  <button class="btn btn-primary btn-sm btn-run"
+                          onclick="runAccount('{{ account.account_id }}')">
+                    Enviar
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="icon">📊</div>
+        <p>Nenhuma conta encontrada na planilha.</p>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script>
+// Base URL relativa (funciona atrás de proxy)
+const BASE = window.location.pathname.replace(/\/$/, '');
+
+const pollingIntervals = {};
+
+function showToast(message, type) {
+  const container = document.getElementById("toast-container");
+  const toast = document.createElement("div");
+  toast.className = "toast " + (type || "info");
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(function() { toast.remove(); }, 4000);
+}
+
+function updateRow(accountId, jobId, progress) {
+  const row = document.querySelector('tr[data-account-id="' + accountId + '"]');
+  if (!row) return;
+  const fill  = row.querySelector(".progress-bar-fill");
+  const label = row.querySelector(".progress-label");
+  const runBtn = row.querySelector(".btn-run");
+
+  const pct = progress.steps_total > 0
+    ? Math.round((progress.steps_done / progress.steps_total) * 100) : 0;
+
+  fill.style.width = pct + "%";
+  fill.classList.remove("done", "error");
+  label.classList.remove("done", "error");
+
+  if (progress.status === "done") {
+    fill.style.width = "100%";
+    fill.classList.add("done");
+    label.classList.add("done");
+    label.textContent = "Concluído";
+    if (runBtn) runBtn.disabled = false;
+    stopPolling(jobId);
+    showToast("Relatório de " + progress.client_name + " enviado!", "success");
+  } else if (progress.status === "error") {
+    fill.classList.add("error");
+    label.classList.add("error");
+    label.textContent = "Erro: " + (progress.error_message || "desconhecido");
+    if (runBtn) runBtn.disabled = false;
+    stopPolling(jobId);
+    showToast("Erro em " + progress.client_name, "error");
+  } else {
+    label.textContent = progress.current_step || "Processando...";
+    if (runBtn) runBtn.disabled = true;
+  }
+}
+
+function startPolling(accountId, jobId) {
+  if (pollingIntervals[jobId]) return;
+  pollingIntervals[jobId] = setInterval(function() {
+    fetch(BASE + "/progress/" + jobId)
+      .then(function(r) { return r.json(); })
+      .then(function(data) { updateRow(accountId, jobId, data); })
+      .catch(function(e) { console.error("Polling error:", e); });
+  }, 2000);
+}
+
+function stopPolling(jobId) {
+  clearInterval(pollingIntervals[jobId]);
+  delete pollingIntervals[jobId];
+}
+
+function runAccount(accountId) {
+  var row = document.querySelector('tr[data-account-id="' + accountId + '"]');
+  var runBtn = row ? row.querySelector(".btn-run") : null;
+  if (runBtn) runBtn.disabled = true;
+
+  var fill  = row ? row.querySelector(".progress-bar-fill") : null;
+  var label = row ? row.querySelector(".progress-label") : null;
+  if (fill)  { fill.style.width = "5%"; fill.classList.remove("done","error"); }
+  if (label) { label.textContent = "Iniciando..."; label.classList.remove("done","error"); }
+
+  fetch(BASE + "/run/" + accountId, { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        showToast("Erro: " + data.error, "error");
+        if (runBtn) runBtn.disabled = false;
+        return;
+      }
+      startPolling(accountId, data.job_id);
+    })
+    .catch(function(e) {
+      showToast("Falha: " + e.message, "error");
+      if (runBtn) runBtn.disabled = false;
+    });
+}
+
+function runAll() {
+  var btn = document.getElementById("btn-run-all");
+  if (btn) btn.disabled = true;
+
+  fetch(BASE + "/run/all", { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        showToast("Erro: " + data.error, "error");
+        if (btn) btn.disabled = false;
+        return;
+      }
+      showToast(data.job_ids.length + " envios iniciados!", "success");
+      data.job_ids.forEach(function(jobId) {
+        var parts = jobId.split("_");
+        var tsIdx = -1;
+        for (var i = parts.length - 1; i >= 0; i--) {
+          if (/^\d{10,}$/.test(parts[i])) { tsIdx = i; break; }
+        }
+        var accountId = parts.slice(0, tsIdx).join("_");
+        startPolling(accountId, jobId);
+      });
+    })
+    .catch(function(e) {
+      showToast("Falha: " + e.message, "error");
+      if (btn) btn.disabled = false;
+    });
+}
+  </script>
+</body>
+</html>

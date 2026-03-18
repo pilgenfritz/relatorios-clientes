@@ -1,0 +1,279 @@
+/* ===== WeasyPrint-compatible PDF styles ===== */
+
+@page {
+    size: A4;
+    margin: 1.8cm 1.5cm 2cm 1.5cm;
+    @bottom-center {
+        content: "Página " counter(page) " de " counter(pages);
+        font-size: 9pt;
+        color: #65676B;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    color: #1C1E21;
+    background: #ffffff;
+    line-height: 1.4;
+}
+
+/* ===== HEADER ===== */
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 14pt;
+    border-bottom: 2pt solid #1877F2;
+    margin-bottom: 18pt;
+}
+
+.header-brand {
+    display: flex;
+    flex-direction: column;
+}
+
+.header-brand .brand-title {
+    font-size: 8pt;
+    color: #65676B;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 3pt;
+}
+
+.header-brand .client-name {
+    font-size: 20pt;
+    font-weight: 700;
+    color: #1C1E21;
+    line-height: 1.1;
+}
+
+.header-brand .objective {
+    font-size: 9pt;
+    color: #65676B;
+    margin-top: 4pt;
+}
+
+.header-meta {
+    text-align: right;
+}
+
+.header-meta .period-label {
+    font-size: 8pt;
+    color: #65676B;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.header-meta .period-value {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #1877F2;
+    margin-top: 2pt;
+}
+
+.header-meta .generated-at {
+    font-size: 8pt;
+    color: #BCC0C4;
+    margin-top: 6pt;
+}
+
+/* ===== SECTION TITLE ===== */
+.section-title {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #1C1E21;
+    margin-bottom: 10pt;
+    padding-bottom: 4pt;
+    border-bottom: 1pt solid #E4E6EB;
+}
+
+/* ===== KPI CARDS ===== */
+.kpi-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8pt;
+    margin-bottom: 20pt;
+}
+
+.kpi-card {
+    flex: 1;
+    min-width: 90pt;
+    background: #F0F2F5;
+    border-radius: 6pt;
+    padding: 10pt 12pt;
+    border-left: 3pt solid #1877F2;
+}
+
+.kpi-card .kpi-label {
+    font-size: 8pt;
+    color: #65676B;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4pt;
+}
+
+.kpi-card .kpi-value {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #1C1E21;
+    line-height: 1;
+}
+
+/* ===== CHARTS ===== */
+.chart-section {
+    margin-bottom: 20pt;
+}
+
+.chart-img {
+    width: 100%;
+    display: block;
+}
+
+/* ===== PAGE BREAK ===== */
+.page-break {
+    page-break-before: always;
+}
+
+/* ===== TABLE ===== */
+.campaigns-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+    margin-bottom: 16pt;
+}
+
+.campaigns-table thead tr {
+    background: #1877F2;
+    color: #ffffff;
+}
+
+.campaigns-table thead th {
+    padding: 7pt 8pt;
+    text-align: left;
+    font-weight: 600;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.campaigns-table thead th:first-child {
+    border-radius: 4pt 0 0 4pt;
+}
+
+.campaigns-table thead th:last-child {
+    border-radius: 0 4pt 4pt 0;
+}
+
+.campaigns-table tbody tr:nth-child(even) {
+    background: #F7F8FA;
+}
+
+.campaigns-table tbody tr:nth-child(odd) {
+    background: #ffffff;
+}
+
+.campaigns-table tbody td {
+    padding: 6pt 8pt;
+    border-bottom: 0.5pt solid #E4E6EB;
+    vertical-align: middle;
+}
+
+.campaigns-table tbody td.campaign-name {
+    font-weight: 600;
+    max-width: 150pt;
+    word-break: break-word;
+}
+
+.campaigns-table .col-campaign { width: 34%; }
+.campaigns-table .col-metric   { text-align: right; white-space: nowrap; }
+.campaigns-table thead th.col-metric { text-align: right; }
+
+.campaigns-table tbody td.numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.campaigns-table tfoot tr {
+    background: #E4E6EB;
+    font-weight: 700;
+}
+
+.campaigns-table tfoot td {
+    padding: 7pt 8pt;
+    border-top: 1.5pt solid #1877F2;
+}
+
+.campaigns-table tfoot td.numeric {
+    text-align: right;
+}
+
+/* ===== SPEND SUMMARY ===== */
+.spend-summary {
+    border-collapse: collapse;
+    margin-bottom: 14pt;
+    font-size: 9pt;
+}
+
+.spend-summary td {
+    padding: 3pt 10pt 3pt 0;
+}
+
+.spend-summary .spend-type {
+    color: #444950;
+    padding-right: 24pt;
+}
+
+.spend-summary .spend-value {
+    text-align: right;
+    font-weight: 600;
+    color: #1C1E21;
+}
+
+.spend-summary .spend-total td {
+    border-top: 1pt solid #1877F2;
+    padding-top: 5pt;
+    margin-top: 3pt;
+    color: #1C1E21;
+}
+
+/* ===== CAMPAIGN TYPE GROUPS ===== */
+.campaign-type-section {
+    margin-bottom: 16pt;
+}
+
+.campaign-type-header {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #1877F2;
+    margin-bottom: 5pt;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1pt solid #1877F2;
+    padding-bottom: 3pt;
+}
+
+.campaign-type-header .type-spend {
+    font-size: 9pt;
+    color: #65676B;
+    font-weight: 400;
+}
+
+/* ===== FOOTER NOTE ===== */
+.report-footer-note {
+    margin-top: 14pt;
+    font-size: 7.5pt;
+    color: #BCC0C4;
+    text-align: center;
+    border-top: 0.5pt solid #E4E6EB;
+    padding-top: 8pt;
+}
