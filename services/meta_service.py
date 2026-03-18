@@ -1,3 +1,4 @@
+import re
 from datetime import date, timedelta
 import requests
 from config import config
@@ -640,3 +641,99 @@ def get_campaigns_table(
     result = list(campaigns.values())
     result.sort(key=lambda x: x.get("spend", 0), reverse=True)
     return result
+
+
+# ──────────────────────────────────────────────────────────────
+# Saldo da conta (funding_source_details)
+# ──────────────────────────────────────────────────────────────
+
+def fetch_account_balance(account_id: str) -> dict:
+    """
+    Retorna {balance: float|None, currency: str, is_prepaid: bool}.
+    balance=None significa conta pós-paga (cartão de crédito).
+    """
+    aid = account_id if account_id.startswith("act_") else f"act_{account_id}"
+    try:
+        resp = requests.get(
+            f"{config.META_BASE_URL}/{aid}",
+            params={
+                "access_token": config.META_ACCESS_TOKEN,
+                "fields": "name,currency,funding_source_details",
+            },
+            timeout=15,
+        )
+        data = resp.json()
+    except Exception:
+        return {"balance": None, "currency": "BRL", "is_prepaid": False}
+
+    if "error" in data:
+        return {"balance": None, "currency": "BRL", "is_prepaid": False}
+
+    display_string = (data.get("funding_source_details") or {}).get("display_string", "")
+    match = re.search(r"R\$([0-9.]+,[0-9]+)", display_string)
+    if not match:
+        return {"balance": None, "currency": data.get("currency", "BRL"), "is_prepaid": False}
+
+    balance = float(match.group(1).replace(".", "").replace(",", "."))
+    return {"balance": balance, "currency": data.get("currency", "BRL"), "is_prepaid": True}
+
+
+# ──────────────────────────────────────────────────────────────
+# Resumo semanal rápido (para dashboard)
+# ──────────────────────────────────────────────────────────────
+
+def fetch_weekly_summary(account_id: str) -> dict:
+    """Retorna resumo dos últimos 7 dias: spend, principal métrica de resultado, custo por resultado."""
+    date_start, date_stop = _get_date_range()
+    aid = account_id if account_id.startswith("act_") else f"act_{account_id}"
+
+    try:
+        resp = requests.get(
+            f"{config.META_BASE_URL}/{aid}/insights",
+            params={
+                "access_token": config.META_ACCESS_TOKEN,
+                "time_range": f'{{"since":"{date_start}","until":"{date_stop}"}}',
+                "fields": "spend,impressions,actions,action_values",
+                "limit": 1,
+            },
+            timeout=20,
+        )
+        data = resp.json().get("data", [])
+    except Exception:
+        data = []
+
+    if not data:
+        return {"spend": 0, "impressions": 0, "results": 0, "result_label": "", "cost_per_result": 0}
+
+    row = data[0]
+    spend = float(row.get("spend", 0) or 0)
+    impressions = int(float(row.get("impressions", 0) or 0))
+
+    # Extrai a principal métrica de ações (prioridade: purchase > lead > messages > link_click)
+    actions = row.get("actions", [])
+    result_priority = [
+        ("purchase", "Compras"),
+        ("lead", "Leads"),
+        ("onsite_conversion.messaging_conversation_started_7d", "Mensagens"),
+        ("link_click", "Cliques"),
+    ]
+    results = 0
+    result_label = ""
+    for action_type, label in result_priority:
+        for a in actions:
+            if a.get("action_type") == action_type:
+                results = int(float(a.get("value", 0)))
+                result_label = label
+                break
+        if results > 0:
+            break
+
+    cost_per_result = round(spend / results, 2) if results > 0 else 0
+
+    return {
+        "spend": spend,
+        "impressions": impressions,
+        "results": results,
+        "result_label": result_label,
+        "cost_per_result": cost_per_result,
+    }

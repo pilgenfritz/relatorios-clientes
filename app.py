@@ -4,8 +4,10 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_from_directory, flash
 
+import concurrent.futures
+
 from config import config
-from services import report_runner, sheets_service
+from services import meta_service, report_runner, sheets_service
 
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY
@@ -88,6 +90,70 @@ def progress(job_id):
 @app.route("/progress/all")
 def progress_all():
     return jsonify(report_runner.get_all_progress())
+
+
+# ──────────────────────────────────────────────────────────────
+# DASHBOARD API
+# ──────────────────────────────────────────────────────────────
+
+@app.route("/api/dashboard")
+def api_dashboard():
+    """Retorna dados completos do dashboard: contas + saldo + resumo semanal."""
+    try:
+        accounts = sheets_service.get_all_accounts()
+        budgets = sheets_service.get_budgets()
+    except sheets_service.SheetsError as e:
+        return jsonify({"error": str(e)}), 500
+
+    def fetch_account_data(account):
+        aid = account["account_id"]
+        balance_info = meta_service.fetch_account_balance(aid)
+        weekly = meta_service.fetch_weekly_summary(aid)
+        budget = budgets.get(aid, 0)
+
+        balance = balance_info["balance"]
+        if balance is not None:
+            threshold = 200 if budget > 1500 else 100
+            if balance < threshold:
+                balance_status = "danger"
+            elif balance < threshold * 2:
+                balance_status = "warning"
+            else:
+                balance_status = "healthy"
+        else:
+            balance_status = "postpaid"
+            threshold = 0
+
+        return {
+            "account_id": aid,
+            "client_name": account["client_name"],
+            "whatsapp": account["whatsapp"],
+            "is_prepaid": balance_info["is_prepaid"],
+            "payment_label": "Pré-pago" if balance_info["is_prepaid"] else "Pós-pago",
+            "balance": balance,
+            "balance_status": balance_status,
+            "budget": budget,
+            "threshold": threshold,
+            "weekly": weekly,
+        }
+
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(fetch_account_data, a): a for a in accounts}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception as e:
+                account = futures[future]
+                results.append({
+                    "account_id": account["account_id"],
+                    "client_name": account["client_name"],
+                    "whatsapp": account["whatsapp"],
+                    "error": str(e),
+                })
+
+    results.sort(key=lambda x: x.get("client_name", ""))
+    return jsonify({"accounts": results})
 
 
 # ──────────────────────────────────────────────────────────────

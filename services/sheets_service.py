@@ -91,3 +91,34 @@ def get_all_accounts() -> list[dict]:
         })
 
     return accounts
+
+
+def get_budgets() -> dict[str, float]:
+    """
+    Lê Página1 (usada pelo alerta-de-saldo) para obter orçamento mensal.
+    Retorna {account_id: orcamento_mensal}.
+    Colunas: A=Nome, C=ID da Conta, H=Orçamento Mensal
+    """
+    try:
+        client = _get_client()
+        spreadsheet = client.open_by_key(config.SPREADSHEET_ID)
+        worksheet = spreadsheet.worksheet("Página1")
+        rows = worksheet.get_all_values()
+    except Exception as e:
+        print(f"[Sheets] Erro ao ler orçamentos da Página1: {e}")
+        return {}
+
+    budgets: dict[str, float] = {}
+    for row in rows[1:]:  # skip header
+        if len(row) < 8 or not row[2].strip():
+            continue
+        account_id = row[2].strip()
+        if not account_id.startswith("act_"):
+            account_id = f"act_{account_id}"
+        try:
+            raw = row[7].strip()
+            budget = float(raw.replace(".", "").replace(",", ".")) if raw else 0
+        except ValueError:
+            budget = 0
+        budgets[account_id] = budget
+    return budgets
