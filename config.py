@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 _REQUIRED = [
-    "GOOGLE_SERVICE_ACCOUNT_FILE",
     "SPREADSHEET_ID",
     "META_ACCESS_TOKEN",
     "ZAPI_INSTANCE_ID",

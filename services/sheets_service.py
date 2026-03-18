@@ -1,3 +1,4 @@
+import json
 import os
 import gspread
 from google.oauth2.service_account import Credentials
@@ -17,9 +18,15 @@ class SheetsError(Exception):
 
 def _get_client() -> gspread.Client:
     try:
-        creds = Credentials.from_service_account_file(
-            config.GOOGLE_SERVICE_ACCOUNT_FILE, scopes=SCOPES
-        )
+        # Prioriza JSON inline via variável de ambiente (para containers)
+        sa_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+        if sa_json:
+            info = json.loads(sa_json)
+            creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+        else:
+            creds = Credentials.from_service_account_file(
+                config.GOOGLE_SERVICE_ACCOUNT_FILE, scopes=SCOPES
+            )
         return gspread.authorize(creds)
     except FileNotFoundError:
         raise SheetsError(
