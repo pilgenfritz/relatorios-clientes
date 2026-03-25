@@ -2,7 +2,9 @@ import json
 import time
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request, send_from_directory, flash
+from functools import wraps
+
+from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for, flash
 
 import concurrent.futures
 
@@ -17,10 +19,42 @@ config.REPORTS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ──────────────────────────────────────────────────────────────
+# AUTH
+# ──────────────────────────────────────────────────────────────
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("authenticated"):
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if password == config.DASHBOARD_PASSWORD:
+            session["authenticated"] = True
+            return redirect(url_for("index"))
+        error = "Senha incorreta"
+    return render_template("login.html", error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+# ──────────────────────────────────────────────────────────────
 # INDEX
 # ──────────────────────────────────────────────────────────────
 
 @app.route("/")
+@login_required
 def index():
     accounts = []
     error = None
@@ -36,6 +70,7 @@ def index():
 # ──────────────────────────────────────────────────────────────
 
 @app.route("/run/all", methods=["POST"])
+@login_required
 def run_all():
     try:
         accounts = sheets_service.get_all_accounts()
@@ -50,6 +85,7 @@ def run_all():
 
 
 @app.route("/run/<path:account_id>", methods=["POST"])
+@login_required
 def run_single(account_id):
     # account_id pode vir sem o prefixo act_
     if not account_id.startswith("act_"):
@@ -83,11 +119,13 @@ def run_single(account_id):
 # ──────────────────────────────────────────────────────────────
 
 @app.route("/progress/<job_id>")
+@login_required
 def progress(job_id):
     return jsonify(report_runner.get_progress(job_id))
 
 
 @app.route("/progress/all")
+@login_required
 def progress_all():
     return jsonify(report_runner.get_all_progress())
 
@@ -97,6 +135,7 @@ def progress_all():
 # ──────────────────────────────────────────────────────────────
 
 @app.route("/api/dashboard")
+@login_required
 def api_dashboard():
     """Retorna dados completos do dashboard: contas + saldo + resumo semanal."""
     try:

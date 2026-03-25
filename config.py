@@ -40,6 +40,7 @@ class Config:
     )
 
     FLASK_SECRET_KEY: str = os.getenv("FLASK_SECRET_KEY", "dev")
+    DASHBOARD_PASSWORD: str = os.getenv("DASHBOARD_PASSWORD", "ftz2024")
     BASE_URL: str = os.getenv("BASE_URL", "http://localhost:5000")
     REPORTS_OUTPUT_DIR: Path = Path(os.getenv("REPORTS_OUTPUT_DIR", "output/reports"))
 
