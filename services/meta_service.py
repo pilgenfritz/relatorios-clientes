@@ -44,15 +44,15 @@ OPTIMIZATION_GOAL_DEFAULT = ("link_click", "Cliques")
 
 def detect_campaign_type(name: str) -> str:
     n = name.upper()
-    if "[E-COMMERCE]" in n:
+    if "[ECOMMERCE]" in n or "[E-COMMERCE]" in n:
         return "ECOMMERCE"
     if "[LEAD]" in n:
         return "LEAD"
-    if "[MSG]" in n:
+    if "[MSG]" in n or "[WPP]" in n:
         return "MSG"
-    if "[IG]" in n:
+    if "[TFG]" in n and "[IG]" in n:
         return "IG"
-    if "[SITE]" in n:
+    if "[TFG]" in n or "[SITE]" in n:
         return "SITE"
     return "OTHER"
 
@@ -737,3 +737,115 @@ def fetch_weekly_summary(account_id: str) -> dict:
         "result_label": result_label,
         "cost_per_result": cost_per_result,
     }
+
+
+# ──────────────────────────────────────────────────────────────
+# Campanhas por tipo para o dashboard expandido
+# ──────────────────────────────────────────────────────────────
+
+# Métrica principal e label por tipo de campanha
+_TYPE_RESULT: dict[str, tuple[str, str]] = {
+    "MSG":       ("messages",   "Mensagens"),
+    "IG":        ("link_click", "Visitas ao Perfil"),
+    "SITE":      ("link_click", "Cliques"),
+    "ECOMMERCE": ("purchases",  "Compras"),
+    "LEAD":      ("leads",      "Leads"),
+    "OTHER":     ("link_click", "Cliques"),
+}
+
+CAMPAIGN_TYPE_DISPLAY: dict[str, str] = {
+    "MSG":       "Mensagem",
+    "IG":        "Tráfego no Perfil",
+    "SITE":      "Tráfego no Site",
+    "ECOMMERCE": "Vendas",
+    "LEAD":      "Leads",
+    "OTHER":     "Outras",
+}
+
+
+def fetch_campaigns_for_dashboard(account_id: str, days: int = 7) -> list[dict]:
+    """
+    Retorna lista de campanhas com métricas agrupadas por tipo,
+    para o período informado (days = 7, 14 ou 30).
+    """
+    end = date.today() - timedelta(days=1)
+    start = end - timedelta(days=days - 1)
+    date_start = start.strftime("%Y-%m-%d")
+    date_stop = end.strftime("%Y-%m-%d")
+
+    aid = account_id if account_id.startswith("act_") else f"act_{account_id}"
+
+    try:
+        resp = requests.get(
+            f"{config.META_BASE_URL}/{aid}/insights",
+            params={
+                "access_token": config.META_ACCESS_TOKEN,
+                "time_range": f'{{"since":"{date_start}","until":"{date_stop}"}}',
+                "level": "campaign",
+                "fields": "campaign_name,campaign_id,spend,actions,action_values",
+                "limit": 500,
+            },
+            timeout=30,
+        )
+        data = resp.json()
+    except Exception:
+        return []
+
+    if "error" in data:
+        return []
+
+    # Agrega por campanha (pode vir mais de um row se API paginar)
+    campaigns: dict[str, dict] = {}
+    for raw in data.get("data", []):
+        cid = raw.get("campaign_id", "")
+        cname = raw.get("campaign_name", "")
+        if not cid:
+            continue
+        if cid not in campaigns:
+            campaigns[cid] = {
+                "campaign_id":   cid,
+                "campaign_name": cname,
+                "campaign_type": detect_campaign_type(cname),
+                "spend":         0.0,
+                "messages":      0.0,
+                "link_click":    0.0,
+                "purchases":     0.0,
+                "leads":         0.0,
+            }
+        c = campaigns[cid]
+        c["spend"]      += float(raw.get("spend", 0) or 0)
+        c["messages"]   += _extract_action(raw, [
+            "onsite_conversion.messaging_conversation_started_7d",
+            "onsite_conversion.total_messaging_connection",
+        ])
+        c["link_click"] += _extract_action(raw, ["link_click"])
+        c["purchases"]  += _extract_action(raw, ["purchase"])
+        c["leads"]      += _extract_action(raw, [
+            "lead", "offsite_conversion.fb_pixel_lead",
+            "onsite_conversion.lead_grouped", "onsite_conversion.lead",
+        ])
+
+    result = []
+    for c in campaigns.values():
+        spend = round(c["spend"], 2)
+        if spend == 0:
+            continue
+
+        ctype = c["campaign_type"]
+        result_key, result_label = _TYPE_RESULT.get(ctype, ("link_click", "Cliques"))
+        result_val = int(c.get(result_key, 0))
+        cost_per_result = round(spend / result_val, 2) if result_val > 0 else 0
+
+        result.append({
+            "campaign_id":     c["campaign_id"],
+            "campaign_name":   c["campaign_name"],
+            "campaign_type":   ctype,
+            "type_label":      CAMPAIGN_TYPE_DISPLAY.get(ctype, "Outras"),
+            "spend":           spend,
+            "result_value":    result_val,
+            "result_label":    result_label,
+            "cost_per_result": cost_per_result,
+        })
+
+    result.sort(key=lambda x: (x["campaign_type"], -x["spend"]))
+    return result

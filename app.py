@@ -195,6 +195,22 @@ def api_dashboard():
     return jsonify({"accounts": results})
 
 
+@app.route("/api/campaigns/<path:account_id>")
+@login_required
+def api_campaigns(account_id):
+    """Retorna campanhas ativas da conta agrupadas por tipo, com métricas do período."""
+    if not account_id.startswith("act_"):
+        account_id = f"act_{account_id}"
+    days = request.args.get("days", 7, type=int)
+    if days not in (7, 14, 30):
+        days = 7
+    try:
+        campaigns = meta_service.fetch_campaigns_for_dashboard(account_id, days)
+        return jsonify({"campaigns": campaigns, "days": days})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ──────────────────────────────────────────────────────────────
 # DOWNLOAD
 # ──────────────────────────────────────────────────────────────
