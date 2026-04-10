@@ -49,6 +49,8 @@ body {
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-primary { background: #1877F2; color: #fff; }
 .btn-primary:hover:not(:disabled) { background: #166FE5; }
+.btn-secondary { background: #E4E6EB; color: #1C1E21; text-decoration: none; }
+.btn-secondary:hover { background: #D8DADF; }
 .btn-success { background: #42B72A; color: #fff; }
 .btn-success:hover:not(:disabled) { background: #36A420; }
 .btn-outline { background: transparent; color: #1877F2; border: 1.5px solid #1877F2; }
@@ -433,7 +435,10 @@ function renderCard(acc) {
     weeklyHtml +
     '<div class="card-footer">' +
       '<div class="progress-info" id="progress-' + acc.account_id + '"></div>' +
-      '<button class="btn btn-primary btn-sm" id="btn-' + acc.account_id + '" onclick="runAccount(\'' + acc.account_id + '\')">Enviar</button>' +
+      '<div style="display:flex;gap:8px">' +
+        '<a class="btn btn-secondary btn-sm" href="https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=' + acc.account_id.replace('act_', '') + '&business_id=3007766306108936" target="_blank" rel="noopener">Gerenciador</a>' +
+        '<button class="btn btn-primary btn-sm" id="btn-' + acc.account_id + '" onclick="runAccount(\'' + acc.account_id + '\')">Enviar</button>' +
+      '</div>' +
     '</div>' +
   '</div>';
 }
