@@ -763,7 +763,7 @@ CAMPAIGN_TYPE_DISPLAY: dict[str, str] = {
 }
 
 
-def fetch_campaigns_for_dashboard(account_id: str, days: int = 7) -> list[dict]:
+def fetch_campaigns_for_dashboard(account_id: str, days: int = 7, campaign_filter: str = "") -> list[dict]:
     """
     Retorna lista de campanhas com métricas agrupadas por tipo,
     para o período informado (days = 7, 14 ou 30).
@@ -814,9 +814,9 @@ def fetch_campaigns_for_dashboard(account_id: str, days: int = 7) -> list[dict]:
             }
         c = campaigns[cid]
         c["spend"]      += float(raw.get("spend", 0) or 0)
+        # Usa apenas messaging_conversation_started_7d — mesmo valor que o Ads Manager mostra
         c["messages"]   += _extract_action(raw, [
             "onsite_conversion.messaging_conversation_started_7d",
-            "onsite_conversion.total_messaging_connection",
         ])
         c["link_click"] += _extract_action(raw, ["link_click"])
         c["purchases"]  += _extract_action(raw, ["purchase"])
@@ -846,6 +846,11 @@ def fetch_campaigns_for_dashboard(account_id: str, days: int = 7) -> list[dict]:
             "result_label":    result_label,
             "cost_per_result": cost_per_result,
         })
+
+    # Aplica filtro por tag no nome da campanha (ex: "[TELHAS]")
+    if campaign_filter:
+        tags = [t.strip().upper() for t in campaign_filter.replace(",", "|").split("|") if t.strip()]
+        result = [c for c in result if any(tag in c["campaign_name"].upper() for tag in tags)]
 
     result.sort(key=lambda x: (x["campaign_type"], -x["spend"]))
     return result

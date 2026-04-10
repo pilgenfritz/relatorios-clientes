@@ -174,6 +174,7 @@ def api_dashboard():
             "budget": budget,
             "threshold": threshold,
             "weekly": weekly,
+            "campaign_filter": account.get("campaign_filter", ""),
         }
 
     results = []
@@ -204,8 +205,9 @@ def api_campaigns(account_id):
     days = request.args.get("days", 7, type=int)
     if days not in (7, 14, 30):
         days = 7
+    campaign_filter = request.args.get("filter", "")
     try:
-        campaigns = meta_service.fetch_campaigns_for_dashboard(account_id, days)
+        campaigns = meta_service.fetch_campaigns_for_dashboard(account_id, days, campaign_filter)
         return jsonify({"campaigns": campaigns, "days": days})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

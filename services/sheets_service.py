@@ -41,7 +41,7 @@ def get_all_accounts() -> list[dict]:
     Lê todas as contas da aba da planilha.
 
     Colunas esperadas:
-      Nome | ID da Conta de Anúncios | Grupo WhatsApp | Objetivo | Métricas
+      Nome | ID da Conta de Anúncios | Grupo WhatsApp | Objetivo | Métricas | Filtro (opcional)
     """
     try:
         client = _get_client()
@@ -61,11 +61,12 @@ def get_all_accounts() -> list[dict]:
 
     accounts = []
     for i, row in enumerate(rows, start=2):
-        client_name = str(row.get("Nome", "")).strip()
-        account_id  = str(row.get("ID da Conta de Anúncios", "")).strip()
-        whatsapp    = str(row.get("Grupo WhatsApp", "")).strip()
-        objective   = str(row.get("Objetivo", "")).strip()
-        metrics_raw = str(row.get("Métricas", "")).strip()
+        client_name     = str(row.get("Nome", "")).strip()
+        account_id      = str(row.get("ID da Conta de Anúncios", "")).strip()
+        whatsapp        = str(row.get("Grupo WhatsApp", "")).strip()
+        objective       = str(row.get("Objetivo", "")).strip()
+        metrics_raw     = str(row.get("Métricas", "")).strip()
+        campaign_filter = str(row.get("Filtro", "")).strip()
 
         if not account_id or not client_name:
             continue
@@ -88,6 +89,7 @@ def get_all_accounts() -> list[dict]:
             "metrics_raw": metrics_raw,
             "metrics_list": metrics_list,
             "whatsapp": whatsapp,
+            "campaign_filter": campaign_filter,
         })
 
     return accounts
