@@ -254,6 +254,22 @@ body {
 .camp-metric .lbl { font-size: 11px; color: #65676B; display: block; }
 .camp-spend { text-align: right; font-weight: 600; color: #1C1E21; }
 
+/* ===== Performance Flag ===== */
+.perf-flag {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.perf-flag.green  { background: #42B72A; }
+.perf-flag.yellow { background: #F5C842; }
+.perf-flag.orange { background: #F97316; }
+.perf-flag.red    { background: #FA3E3E; }
+.perf-flag.none   { display: none; }
+
 /* ===== Campaign loading states ===== */
 .campaigns-loading {
   padding: 20px 16px;
@@ -510,6 +526,7 @@ function renderCampaigns(accountId, campaigns) {
     '</div>';
 
     groups[type].forEach(function(c) {
+      var flag = perfFlag(type, c.cost_per_result);
       html += '<div class="campaign-row">' +
         '<div class="camp-name" title="' + c.campaign_name + '">' + c.campaign_name + '</div>' +
         '<div class="camp-metric">' +
@@ -517,7 +534,7 @@ function renderCampaigns(accountId, campaigns) {
           '<span class="lbl">' + c.result_label + '</span>' +
         '</div>' +
         '<div class="camp-metric">' +
-          '<span class="num">' + fmtCur(c.cost_per_result) + '</span>' +
+          '<span class="num"><span class="perf-flag ' + flag + '"></span>' + fmtCur(c.cost_per_result) + '</span>' +
           '<span class="lbl">Custo/' + singularize(c.result_label) + '</span>' +
         '</div>' +
         '<div class="camp-spend">' + fmtCur(c.spend) + '</div>' +
@@ -528,6 +545,27 @@ function renderCampaigns(accountId, campaigns) {
   });
 
   container.innerHTML = html;
+}
+
+// ─── Flag de desempenho por custo/resultado ──────────────────
+function perfFlag(type, costPerResult) {
+  var c = parseFloat(costPerResult);
+  if (isNaN(c) || c <= 0) return 'none';
+
+  if (type === 'MSG') {
+    if (c >= 10)  return 'red';
+    if (c >= 6)   return 'yellow';
+    return 'green';
+  }
+
+  if (type === 'IG') {
+    if (c >= 1.00) return 'red';
+    if (c >= 0.40) return 'orange';
+    if (c < 0.15)  return 'green';
+    return 'yellow';  // >= 0.15 e < 0.40
+  }
+
+  return 'none';
 }
 
 function singularize(label) {
