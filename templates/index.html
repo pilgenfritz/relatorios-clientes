@@ -361,7 +361,7 @@ body {
     <div class="brand">Dashboard Meta Ads</div>
     <div class="navbar-actions">
       <button class="btn btn-white btn-sm" id="btn-refresh" onclick="loadDashboard()">Atualizar</button>
-      <button class="btn btn-success" id="btn-run-all" onclick="runAll()">Gerar Todos</button>
+      <button class="btn btn-success" id="btn-run-all" onclick="runAll()" disabled title="Envio de relatórios temporariamente desativado">Gerar Todos</button>
     </div>
   </nav>
 
@@ -466,7 +466,7 @@ function renderCardLeft(acc) {
     '<div class="progress-info" id="progress-' + acc.account_id + '"></div>' +
     '<div class="card-actions">' +
       '<a class="btn btn-secondary btn-sm" href="' + adsUrl + '" target="_blank" rel="noopener">Gerenciador</a>' +
-      '<button class="btn btn-primary btn-sm" id="btn-' + acc.account_id + '" onclick="runAccount(\'' + acc.account_id + '\')">Enviar</button>' +
+      '<button class="btn btn-primary btn-sm" id="btn-' + acc.account_id + '" onclick="runAccount(\'' + acc.account_id + '\')" disabled title="Envio de relatórios temporariamente desativado">Enviar</button>' +
     '</div>' +
   '</div>';
 }
