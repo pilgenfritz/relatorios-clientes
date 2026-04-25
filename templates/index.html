@@ -565,6 +565,12 @@ function perfFlag(type, costPerResult) {
     return 'yellow';  // >= 0.15 e < 0.40
   }
 
+  if (type === 'SITE') {
+    if (c > 0.60)  return 'red';
+    if (c >= 0.26) return 'orange';
+    return 'green';  // < 0.26
+  }
+
   return 'none';
 }
 
