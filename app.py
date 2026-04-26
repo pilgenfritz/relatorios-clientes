@@ -9,7 +9,7 @@ from flask import Flask, jsonify, redirect, render_template, request, send_from_
 import concurrent.futures
 
 from config import config
-from services import meta_service, report_runner, sheets_service
+from services import google_ads_service, meta_service, report_runner, sheets_service
 
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY
@@ -177,9 +177,10 @@ def api_dashboard():
             "campaign_filter": account.get("campaign_filter", ""),
         }
 
+    meta_accounts = [a for a in accounts if a.get("account_id")]
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {executor.submit(fetch_account_data, a): a for a in accounts}
+        futures = {executor.submit(fetch_account_data, a): a for a in meta_accounts}
         for future in concurrent.futures.as_completed(futures):
             try:
                 results.append(future.result())
@@ -194,6 +195,94 @@ def api_dashboard():
 
     results.sort(key=lambda x: x.get("client_name", ""))
     return jsonify({"accounts": results})
+
+
+# ──────────────────────────────────────────────────────────────
+# DASHBOARD API — GOOGLE ADS
+# ──────────────────────────────────────────────────────────────
+
+@app.route("/api/dashboard/google")
+@login_required
+def api_dashboard_google():
+    """Retorna dados das contas Google Ads: gasto MTD + resumo semanal."""
+    if not config.GOOGLE_ADS_ENABLED:
+        return jsonify({
+            "error": "Google Ads não configurado. Defina GOOGLE_ADS_DEVELOPER_TOKEN e demais env vars."
+        }), 503
+
+    try:
+        accounts = sheets_service.get_all_accounts()
+        budgets = sheets_service.get_budgets()
+    except sheets_service.SheetsError as e:
+        return jsonify({"error": str(e)}), 500
+
+    google_accounts = [a for a in accounts if a.get("google_customer_id")]
+
+    def fetch_google_account_data(account):
+        cid = account["google_customer_id"]
+        spend_info = google_ads_service.fetch_account_spend_mtd(cid)
+        weekly = google_ads_service.fetch_weekly_summary(cid, days=7)
+
+        # Busca budget pelo Meta account_id (mesma linha do Sheets) se disponível
+        budget = budgets.get(account.get("account_id", ""), 0) if account.get("account_id") else 0
+
+        spend_mtd = spend_info["spend_mtd"]
+        if budget > 0:
+            pct = spend_mtd / budget
+            if pct >= 1.0:
+                spend_status = "danger"
+            elif pct >= 0.7:
+                spend_status = "warning"
+            else:
+                spend_status = "healthy"
+        else:
+            spend_status = "healthy"
+
+        return {
+            "google_customer_id": cid,
+            "client_name": account["client_name"],
+            "spend_mtd": spend_mtd,
+            "spend_status": spend_status,
+            "currency": spend_info.get("currency", "BRL"),
+            "budget": budget,
+            "weekly": weekly,
+            "campaign_filter": account.get("campaign_filter", ""),
+        }
+
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {executor.submit(fetch_google_account_data, a): a for a in google_accounts}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception as e:
+                account = futures[future]
+                results.append({
+                    "google_customer_id": account.get("google_customer_id", ""),
+                    "client_name": account["client_name"],
+                    "error": str(e),
+                })
+
+    results.sort(key=lambda x: x.get("client_name", ""))
+    return jsonify({"accounts": results})
+
+
+@app.route("/api/campaigns/google/<customer_id>")
+@login_required
+def api_campaigns_google(customer_id):
+    """Campanhas Google Ads de uma conta no período."""
+    if not config.GOOGLE_ADS_ENABLED:
+        return jsonify({"error": "Google Ads não configurado."}), 503
+
+    days = request.args.get("days", 7, type=int)
+    if days not in (7, 14, 30):
+        days = 7
+    campaign_filter = request.args.get("filter", "")
+    try:
+        campaigns = google_ads_service.fetch_campaigns_for_dashboard(customer_id, days, campaign_filter)
+        return jsonify({"campaigns": campaigns, "days": days})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/campaigns/<path:account_id>")

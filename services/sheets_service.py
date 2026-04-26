@@ -41,7 +41,7 @@ def get_all_accounts() -> list[dict]:
     Lê todas as contas da aba da planilha.
 
     Colunas esperadas:
-      Nome | ID da Conta de Anúncios | Grupo WhatsApp | Objetivo | Métricas | Filtro (opcional)
+      Nome | ID da Conta de Anúncios | Grupo WhatsApp | Objetivo | Métricas | Filtro (opcional) | ID Google Ads (opcional)
     """
     try:
         client = _get_client()
@@ -67,23 +67,24 @@ def get_all_accounts() -> list[dict]:
         objective       = str(row.get("Objetivo", "")).strip()
         metrics_raw     = str(row.get("Métricas", "")).strip()
         campaign_filter = str(row.get("Filtro", "")).strip()
+        google_customer_id = str(row.get("ID Google Ads", "")).strip().replace("-", "")
 
-        if not account_id or not client_name:
+        if not client_name:
+            continue
+        # Aceita linha que tenha pelo menos um ID (Meta ou Google)
+        if not account_id and not google_customer_id:
             continue
 
-        # Garante prefixo act_
-        if not account_id.startswith("act_"):
+        # Garante prefixo act_ no Meta
+        if account_id and not account_id.startswith("act_"):
             account_id = f"act_{account_id}"
 
         # Parse métricas: split por vírgula, lowercase, strip
         metrics_list = [m.strip().lower() for m in metrics_raw.split(",") if m.strip()]
 
-        if not metrics_list:
-            print(f"[Sheets] Linha {i}: sem métricas para {client_name}, pulando.")
-            continue
-
         accounts.append({
             "account_id": account_id,
+            "google_customer_id": google_customer_id,
             "client_name": client_name,
             "objective": objective,
             "metrics_raw": metrics_raw,

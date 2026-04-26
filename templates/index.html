@@ -64,23 +64,30 @@ body {
   padding: 24px 20px;
 }
 
-/* ===== Summary Bar ===== */
-.summary-bar {
+/* ===== Platform Tabs ===== */
+.platform-tabs {
   display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #E4E6EB;
 }
-.summary-item {
-  background: #fff;
-  border-radius: 12px;
-  padding: 14px 20px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.08);
-  flex: 1;
-  min-width: 160px;
+.tab-btn {
+  background: transparent;
+  border: none;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #65676B;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
 }
-.summary-item .label { font-size: 11px; color: #65676B; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
-.summary-item .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+.tab-btn:hover { color: #1877F2; }
+.tab-btn.active {
+  color: #1877F2;
+  border-bottom-color: #1877F2;
+}
 .text-blue { color: #1877F2; }
 .text-red { color: #FA3E3E; }
 .text-green { color: #42B72A; }
@@ -347,7 +354,8 @@ body {
   .camp-spend { display: none; }
 }
 @media (max-width: 600px) {
-  .summary-bar { flex-direction: column; }
+  .platform-tabs { gap: 0; }
+  .tab-btn { padding: 10px 14px; }
   .navbar { padding: 0 14px; }
   .container { padding: 14px 10px; }
   .campaign-row { grid-template-columns: 1fr 90px; }
@@ -358,7 +366,7 @@ body {
 <body>
 
   <nav class="navbar">
-    <div class="brand">Dashboard Meta Ads</div>
+    <div class="brand">Clientes FTZ Marketing</div>
     <div class="navbar-actions">
       <button class="btn btn-white btn-sm" id="btn-refresh" onclick="loadDashboard()">Atualizar</button>
       <button class="btn btn-success" id="btn-run-all" onclick="runAll()" disabled title="Envio de relatórios temporariamente desativado">Gerar Todos</button>
@@ -368,23 +376,9 @@ body {
   <div class="container">
     <div id="error-banner" class="error-banner" style="display:none"></div>
 
-    <div class="summary-bar" id="summary-bar" style="display:none">
-      <div class="summary-item">
-        <div class="label">Total de Contas</div>
-        <div class="value text-blue" id="sum-total">0</div>
-      </div>
-      <div class="summary-item">
-        <div class="label">Saldo Baixo</div>
-        <div class="value text-red" id="sum-danger">0</div>
-      </div>
-      <div class="summary-item">
-        <div class="label">Saldo OK</div>
-        <div class="value text-green" id="sum-healthy">0</div>
-      </div>
-      <div class="summary-item">
-        <div class="label">Gasto Semanal Total</div>
-        <div class="value text-blue" id="sum-spend">R$ 0</div>
-      </div>
+    <div class="platform-tabs">
+      <button class="tab-btn active" data-platform="meta" onclick="switchPlatform('meta')">Meta Ads</button>
+      <button class="tab-btn" data-platform="google" onclick="switchPlatform('google')">Google Ads</button>
     </div>
 
     <div class="cards-list" id="cards-list">
@@ -400,6 +394,17 @@ body {
 var BASE = window.location.pathname.replace(/\/$/, '');
 var pollingIntervals = {};
 var dashboardData = [];
+var currentPlatform = 'meta';
+
+// ─── Tabs ───────────────────────────────────────────────────
+function switchPlatform(p) {
+  if (currentPlatform === p) return;
+  currentPlatform = p;
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.platform === p);
+  });
+  loadDashboard();
+}
 
 // ─── Formatadores ───────────────────────────────────────────
 function fmtCur(val) {
@@ -617,37 +622,163 @@ function renderCard(acc) {
   '</div>';
 }
 
+// ─── Google Ads — flags de performance CPC ───────────────────
+function googleCpcFlag(cpc) {
+  if (!cpc || cpc <= 0) return '';
+  if (cpc < 1)  return 'green';
+  if (cpc <= 3) return 'orange';
+  return 'red';
+}
+
+// ─── Google Ads — left panel ─────────────────────────────────
+function renderGoogleCardLeft(acc) {
+  var sc = acc.spend_status || 'healthy';
+  var pct = acc.budget > 0 ? Math.min(100, Math.round((acc.spend_mtd / acc.budget) * 100)) : 0;
+  var spendBlock =
+    '<div class="balance-block">' +
+      '<div class="balance-row">' +
+        '<span class="balance-label">Gasto no mês</span>' +
+        '<span class="balance-value ' + sc + '">' + fmtCur(acc.spend_mtd) + '</span>' +
+      '</div>' +
+      (acc.budget > 0
+        ? '<div class="progress-bar-wrap"><div class="progress-bar-fill ' + sc + '" style="width:' + pct + '%"></div></div>' +
+          '<div class="balance-details">' +
+            '<span>' + pct + '% do orçamento</span>' +
+            '<span>Orç: ' + fmtCur(acc.budget) + '/mês</span>' +
+          '</div>'
+        : '<div class="balance-details"><span>Sem orçamento configurado</span></div>') +
+    '</div>';
+
+  var adsUrl = 'https://ads.google.com/aw/campaigns?__c=' + acc.google_customer_id;
+
+  return '<div class="card-left">' +
+    '<div>' +
+      '<div class="client-name">' + acc.client_name + '</div>' +
+      '<div class="account-id">' + acc.google_customer_id + '</div>' +
+      '<span class="badge badge-postpaid" style="margin-top:6px;display:inline-block">Google Ads</span>' +
+    '</div>' +
+    spendBlock +
+    '<div class="card-actions">' +
+      '<a class="btn btn-secondary btn-sm" href="' + adsUrl + '" target="_blank" rel="noopener">Gerenciador</a>' +
+      '<button class="btn btn-primary btn-sm" disabled title="Envio de relatórios temporariamente desativado">Enviar</button>' +
+    '</div>' +
+  '</div>';
+}
+
+// ─── Google Ads — right panel ────────────────────────────────
+function renderGoogleCardRight(acc) {
+  return '<div class="card-right">' +
+    '<div class="card-right-header">' +
+      '<span class="period-label">Período</span>' +
+      '<select class="period-select" onchange="loadGoogleCampaigns(\'' + acc.google_customer_id + '\', this.value, \'' + (acc.campaign_filter || '') + '\')">' +
+        '<option value="7">Últimos 7 dias</option>' +
+        '<option value="14">Últimos 14 dias</option>' +
+        '<option value="30">Últimos 30 dias</option>' +
+      '</select>' +
+    '</div>' +
+    '<div class="campaigns-container" id="gcampaigns-' + acc.google_customer_id + '">' +
+      '<div class="campaigns-loading"><div class="mini-spinner"></div>Carregando campanhas...</div>' +
+    '</div>' +
+  '</div>';
+}
+
+// ─── Google Ads — render campanhas ───────────────────────────
+function renderGoogleCampaigns(customerId, campaigns) {
+  var container = document.getElementById('gcampaigns-' + customerId);
+  if (!container) return;
+
+  if (!campaigns || campaigns.length === 0) {
+    container.innerHTML = '<div class="campaigns-empty">Nenhuma campanha com investimento no período.</div>';
+    return;
+  }
+
+  var html = '<div class="campaign-type-group">';
+  campaigns.forEach(function(c) {
+    var flag = googleCpcFlag(c.cpc);
+    var hasConv = c.campaign_type === 'GOOGLE_CONVERSAO' && c.conversions != null;
+    html += '<div class="campaign-row">' +
+      '<div class="camp-name" title="' + c.campaign_name + '">' + c.campaign_name + '</div>' +
+      '<div class="camp-metric">' +
+        '<span class="num">' + fmtNum(c.clicks) + '</span>' +
+        '<span class="lbl">Cliques</span>' +
+      '</div>' +
+      '<div class="camp-metric">' +
+        '<span class="num"><span class="perf-flag ' + flag + '"></span>' + fmtCur(c.cpc) + '</span>' +
+        '<span class="lbl">CPC</span>' +
+      '</div>' +
+      '<div class="camp-spend">' + fmtCur(c.spend) + '</div>' +
+      (hasConv
+        ? '<div class="camp-metric" style="grid-column:1 / -1;border-top:1px dashed #F0F2F5;padding-top:6px;margin-top:2px">' +
+            '<span class="num">' + fmtNum(c.conversions) + ' conversões</span>' +
+            '<span class="lbl">Custo: ' + fmtCur(c.cost_per_conversion) + '</span>' +
+          '</div>'
+        : '') +
+    '</div>';
+  });
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+// ─── Google Ads — carrega campanhas ──────────────────────────
+function loadGoogleCampaigns(customerId, days, filter) {
+  var container = document.getElementById('gcampaigns-' + customerId);
+  if (!container) return;
+  container.innerHTML = '<div class="campaigns-loading"><div class="mini-spinner"></div>Carregando campanhas...</div>';
+
+  var url = BASE + '/api/campaigns/google/' + customerId + '?days=' + (days || 7);
+  if (filter) url += '&filter=' + encodeURIComponent(filter);
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        container.innerHTML = '<div class="campaigns-empty" style="color:#C62828">Erro: ' + data.error + '</div>';
+        return;
+      }
+      renderGoogleCampaigns(customerId, data.campaigns);
+    })
+    .catch(function(e) {
+      container.innerHTML = '<div class="campaigns-empty" style="color:#C62828">Falha ao carregar.</div>';
+    });
+}
+
+// ─── Google Ads — render card completo ───────────────────────
+function renderGoogleCard(acc) {
+  var borderClass = 'border-' + (acc.spend_status || 'healthy');
+  return '<div class="client-card ' + borderClass + '" data-google-id="' + acc.google_customer_id + '">' +
+    renderGoogleCardLeft(acc) +
+    renderGoogleCardRight(acc) +
+  '</div>';
+}
+
 // ─── Render dashboard completo ───────────────────────────────
 function renderDashboard(accounts) {
   dashboardData = accounts;
   var list = document.getElementById('cards-list');
-  var summaryBar = document.getElementById('summary-bar');
 
   if (!accounts || accounts.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:60px;color:#65676B;">Nenhuma conta encontrada.</div>';
-    summaryBar.style.display = 'none';
+    var emptyMsg = currentPlatform === 'google'
+      ? 'Nenhum cliente com conta Google Ads configurada na planilha.'
+      : 'Nenhuma conta encontrada.';
+    list.innerHTML = '<div style="text-align:center;padding:60px;color:#65676B;">' + emptyMsg + '</div>';
     return;
   }
 
-  var totalSpend = 0, dangerCount = 0, healthyCount = 0;
-  accounts.forEach(function(acc) {
-    totalSpend += ((acc.weekly || {}).spend || 0);
-    if (acc.balance_status === 'danger')  dangerCount++;
-    if (acc.balance_status === 'healthy') healthyCount++;
-  });
-
-  document.getElementById('sum-total').textContent  = accounts.length;
-  document.getElementById('sum-danger').textContent  = dangerCount;
-  document.getElementById('sum-healthy').textContent = healthyCount;
-  document.getElementById('sum-spend').textContent   = fmtCur(totalSpend);
-  summaryBar.style.display = 'flex';
-
   var html = '';
-  accounts.forEach(function(acc) { html += renderCard(acc); });
+  accounts.forEach(function(acc) {
+    html += currentPlatform === 'google' ? renderGoogleCard(acc) : renderCard(acc);
+  });
   list.innerHTML = html;
 
   // Carrega campanhas de todos os cards automaticamente
-  accounts.forEach(function(acc) { loadCampaigns(acc.account_id, 7, acc.campaign_filter || ''); });
+  accounts.forEach(function(acc) {
+    if (currentPlatform === 'google') {
+      loadGoogleCampaigns(acc.google_customer_id, 7, acc.campaign_filter || '');
+    } else {
+      loadCampaigns(acc.account_id, 7, acc.campaign_filter || '');
+    }
+  });
 }
 
 // ─── Carrega dados gerais (saldo, orçamento, resumo) ─────────
@@ -662,7 +793,9 @@ function loadDashboard() {
   }
   list.innerHTML = skeletonHtml;
 
-  fetch(BASE + '/api/dashboard')
+  var endpoint = currentPlatform === 'google' ? '/api/dashboard/google' : '/api/dashboard';
+
+  fetch(BASE + endpoint)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.error) {

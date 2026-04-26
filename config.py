@@ -44,5 +44,12 @@ class Config:
     BASE_URL: str = os.getenv("BASE_URL", "http://localhost:5000")
     REPORTS_OUTPUT_DIR: Path = Path(os.getenv("REPORTS_OUTPUT_DIR", "output/reports"))
 
+    GOOGLE_ADS_DEVELOPER_TOKEN: str = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN", "")
+    GOOGLE_ADS_CLIENT_ID: str = os.getenv("GOOGLE_ADS_CLIENT_ID", "")
+    GOOGLE_ADS_CLIENT_SECRET: str = os.getenv("GOOGLE_ADS_CLIENT_SECRET", "")
+    GOOGLE_ADS_REFRESH_TOKEN: str = os.getenv("GOOGLE_ADS_REFRESH_TOKEN", "")
+    GOOGLE_ADS_LOGIN_CUSTOMER_ID: str = os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
+    GOOGLE_ADS_ENABLED: bool = bool(os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN"))
+
 
 config = Config()
