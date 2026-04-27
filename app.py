@@ -212,7 +212,6 @@ def api_dashboard_google():
 
     try:
         accounts = sheets_service.get_all_accounts()
-        budgets = sheets_service.get_budgets()
     except sheets_service.SheetsError as e:
         return jsonify({"error": str(e)}), 500
 
@@ -223,8 +222,7 @@ def api_dashboard_google():
         spend_info = google_ads_service.fetch_account_spend_mtd(cid)
         weekly = google_ads_service.fetch_weekly_summary(cid, days=7)
 
-        # Busca budget pelo Meta account_id (mesma linha do Sheets) se disponível
-        budget = budgets.get(account.get("account_id", ""), 0) if account.get("account_id") else 0
+        budget = account.get("google_budget", 0)
 
         spend_mtd = spend_info["spend_mtd"]
         if budget > 0:

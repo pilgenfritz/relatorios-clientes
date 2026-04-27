@@ -68,6 +68,7 @@ def get_all_accounts() -> list[dict]:
         metrics_raw     = str(row.get("Métricas", "")).strip()
         campaign_filter = str(row.get("Filtro", "")).strip()
         google_customer_id = str(row.get("ID Google Ads", "")).strip().replace("-", "")
+        google_budget   = _parse_brl_number(row.get("Orçamento Google", ""))
 
         if not client_name:
             continue
@@ -85,6 +86,7 @@ def get_all_accounts() -> list[dict]:
         accounts.append({
             "account_id": account_id,
             "google_customer_id": google_customer_id,
+            "google_budget": google_budget,
             "client_name": client_name,
             "objective": objective,
             "metrics_raw": metrics_raw,
@@ -94,6 +96,18 @@ def get_all_accounts() -> list[dict]:
         })
 
     return accounts
+
+
+def _parse_brl_number(value) -> float:
+    """Converte 'R$ 1.500,00' / '1500' / '1500,50' em float. Retorna 0 em caso de erro."""
+    raw = str(value or "").strip()
+    if not raw:
+        return 0.0
+    raw = raw.replace("R$", "").replace(" ", "")
+    try:
+        return float(raw.replace(".", "").replace(",", "."))
+    except ValueError:
+        return 0.0
 
 
 def get_budgets() -> dict[str, float]:
